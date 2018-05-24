@@ -1,119 +1,104 @@
-// npm install body-parser --save  
-//     >> Midleware para convertir cualquier cosa que venga en el body a un objeto javascript
-// npm install bcryptjs --save
-//     >> Para encriptar datos en una sóla vía
-
-var jwt = require('jsonwebtoken');
 var mdAutenticacion = require('../middlewares/autenticacion');
-
 var express = require('express');
 var app = express();
 
-var bcrypt = require('bcryptjs');
-
-// Importar el esquema del usuario
-var Usuario = require('../models/usuario');
+// Importar el esquema del hospital
+var Hospital = require('../models/hospital');
 
 // ==================================================
-// Obtener todos los usuarios
+// Obtener todos los hospitals
 // ==================================================
-app.get('/', (req, res, next) => {
+app.get('/', (req, res) => {
     var desde = req.query.desde || 0;
     desde = Number(desde);
 
-    Usuario.find({}, 'nombre email img role')
+    Hospital.find({}, 'nombre img usuario')
         .skip(desde)
         .limit(5)
+        .populate('usuario', 'nombre email')
         .exec(
-            (err, usuarios) => {
+            (err, hospitales) => {
                 if (err) {
                     return res.status(500).json({
                         ok: false,
-                        mensaje: 'Error cargando usuario',
+                        mensaje: 'Error cargando los hospitales',
                         errors: err
                     });
                 }
-                Usuario.count({}, (err, conteo) => {
+                Hospital.count({}, (err, conteo) => {
                     res.status(200).json({
                         ok: true,
-                        usuarios,
+                        hospitales,
                         total: conteo
                     });
                 });
             });
 });
 
-
 // ==================================================
-// Crear un nuevo usuario
+// Crear un nuevo hospital
 // ==================================================
 app.post('/', mdAutenticacion.verificaToken, (req, res) => {
     var body = req.body; // Tiene que estar instalado y configurado el body-parser
-
-    var usuario = new Usuario({
+    var hospital = new Hospital({
         nombre: body.nombre,
-        email: body.email,
-        password: bcrypt.hashSync(body.password),
         img: body.img,
-        role: body.role
+        usuario: req.usuario._id
     });
 
-    usuario.save((err, usuarioDB) => {
+    hospital.save((err, hospitalDB) => {
         if (err) {
             return res.status(400).json({
                 ok: false,
-                mensaje: 'Error al crear usuario',
+                mensaje: 'Error al crear el hospital',
                 errors: err
             });
         }
         res.status(201).json({
             ok: true,
-            usuario: usuarioDB,
+            hospital: hospitalDB,
             usuarioToken: req.usuario //Se define en el middleware de autenticacion web token
         });
     });
 });
 
-
 // ==================================================
-// Actualizar usuario
+// Actualizar hospital
 // ==================================================
 app.put('/:id', mdAutenticacion.verificaToken, (req, res) => {
     var id = req.params.id;
     var body = req.body;
 
     // Verificar si el id existe en la BD
-    Usuario.findById(id, (err, usuario) => {
+    Hospital.findById(id, (err, hospital) => {
         if (err) {
             return res.status(500).json({
                 ok: false,
-                mensaje: 'Error al buscar usuario',
+                mensaje: 'Error al buscar el hospital',
                 errors: err
             });
         }
-        if (!usuario) {
+        if (!hospital) {
             return res.status(400).json({
                 ok: false,
-                mensaje: `El usuario con el Id´(${id}) no existe`,
+                mensaje: `El hospital con el Id´(${id}) no existe`,
                 errors: err
             });
         }
-        usuario.nombre = body.nombre;
-        usuario.email = body.email;
-        usuario.role = body.role;
-
-        usuario.save((err, usuarioSave) => {
+        hospital.nombre = body.nombre;
+        hospital.usuario = req.usuario._id;
+        hospital.img = body.img;
+        hospital.save((err, hospitalSave) => {
             if (err) {
                 return res.status(400).json({
                     ok: false,
-                    mensaje: 'Error al actualizar el usuario',
+                    mensaje: 'Error al actualizar el hospital',
                     errors: err
                 });
             }
-            usuarioSave.password = ':)';
             res.status(200).json({
                 ok: true,
-                usuario: usuarioSave,
+                hospital: hospitalSave,
                 usuarioToken: req.usuario
             });
         });
@@ -121,20 +106,20 @@ app.put('/:id', mdAutenticacion.verificaToken, (req, res) => {
 });
 
 // ==================================================
-// Eliminar un usuario
+// Eliminar un hospital
 // ==================================================
 app.delete('/:id', mdAutenticacion.verificaToken, (req, res) => {
     var id = req.params.id;
 
-    Usuario.findByIdAndRemove(id, (err, usuarioDel) => {
+    Hospital.findByIdAndRemove(id, (err, hospitalDel) => {
         if (err) {
             return res.status(500).json({
                 ok: false,
-                mensaje: 'Error al eliminar el usuario',
+                mensaje: 'Error al eliminar el hospital',
                 errors: err
             });
         }
-        if (!usuarioDel) {
+        if (!hospitalDel) {
             return res.status(400).json({
                 ok: false,
                 mensaje: `El usuario con el Id´(${id}) no existe`,
@@ -143,11 +128,10 @@ app.delete('/:id', mdAutenticacion.verificaToken, (req, res) => {
         }
         res.status(200).json({
             ok: true,
-            usuario: usuarioDel,
+            usuario: hospitalDel,
             usuarioToken: req.usuario
         });
     });
 });
-
 
 module.exports = app;

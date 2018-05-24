@@ -13,9 +13,11 @@
         "bcryptjs": "^2.4.3",
         "body-parser": "^1.18.3",
         "express": "^4.16.2",
+        "express-fileupload": "^0.4.0",
         "jsonwebtoken": "^8.2.1",
         "mongoose": "^5.0.8",
-        "mongoose-unique-validator": "^2.0.1"
+        "mongoose-unique-validator": "^2.0.1",
+        "serve-index": "^1.9.1"
     },
     "devDependencies": {
         "nodemon": "^1.17.1"
